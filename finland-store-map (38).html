@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finland Hypermarket Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f5f6f8;--panel:#fff;--card:#f0f1f4;--t1:#111;--t2:#555;--t3:#999;--brd:#ddd;--radius:10px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);height:100vh;overflow:hidden}
+#app{display:flex;height:100vh}
+
+/* SIDEBAR */
+.sb{width:380px;min-width:380px;background:var(--panel);border-right:1px solid var(--brd);display:flex;flex-direction:column;z-index:1000}
+.sb-head{padding:16px 20px;border-bottom:1px solid var(--brd)}
+.sb-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.sb-count{font-size:12px;color:var(--t2);margin-top:4px}
+.filters{padding:10px 20px;border-bottom:1px solid var(--brd);display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--brd);background:#fff;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:.2s;user-select:none}
+.chip.on{color:#fff;border-color:transparent}
+.chip-dot{width:7px;height:7px;border-radius:50%}
+.chip-n{font-size:10px;opacity:.7;font-weight:500}
+.search{padding:10px 20px;border-bottom:1px solid var(--brd)}
+.search input{width:100%;padding:8px 12px;border:1.5px solid var(--brd);border-radius:var(--radius);font-size:13px;outline:none;background:var(--bg);font-family:inherit}
+.search input:focus{border-color:#FF6600}
+.list{flex:1;overflow-y:auto;padding:4px 8px}
+.list::-webkit-scrollbar{width:4px}
+.list::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+.row{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:.15s}
+.row:hover{background:var(--card)}
+.row.act{background:var(--card);box-shadow:inset 3px 0 0 var(--rc)}
+.row-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.row-info{flex:1;min-width:0}
+.row-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{font-size:10px;color:var(--t2);margin-top:2px;display:flex;gap:6px;align-items:center}
+.row-tag{font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:3px;color:#fff}
+.row-hrs{font-size:10px;color:var(--t3);background:var(--bg);padding:1px 5px;border-radius:3px}
+.row-btn{background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:3px;border-radius:4px;opacity:0;transition:.2s}
+.row:hover .row-btn{opacity:1}
+.row-btn:hover{color:#FF6600;background:rgba(255,102,0,.1)}
+.row-btn.del:hover{color:#e33;background:rgba(255,0,0,.08)}
+
+/* ADD PANEL */
+.add-panel{border-top:1px solid var(--brd);padding:12px 20px;background:var(--card)}
+.add-btn{width:100%;padding:9px;background:#FF6600;border:none;border-radius:var(--radius);color:#fff;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+.add-btn:hover{background:#e55a00}
+.form{display:none}.form.open{display:block}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tab{flex:1;padding:7px;border:1.5px solid var(--brd);border-radius:7px;background:#fff;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;text-align:center;font-family:inherit}
+.tab.on{border-color:#FF6600;color:var(--t1);background:#fff5ee}
+.fg{margin-bottom:7px}
+.fl{font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;display:block}
+.fi{width:100%;padding:7px 9px;border:1.5px solid var(--brd);border-radius:7px;font-size:12px;outline:none;font-family:inherit;background:#fff}
+.fi:focus{border-color:#FF6600}
+textarea.fi{resize:vertical}
+select.fi{appearance:none;cursor:pointer}
+.fg2{display:flex;gap:6px}.fg2 .fg{flex:1}
+.colors{display:flex;gap:5px;flex-wrap:wrap}
+.csw{width:26px;height:26px;border-radius:6px;border:2px solid transparent;cursor:pointer}
+.csw:hover{transform:scale(1.1)}.csw.on{border-color:var(--t1);box-shadow:0 0 6px rgba(0,0,0,.2)}
+.fa{display:flex;gap:6px;margin-top:8px}
+.fb{flex:1;padding:7px;border:none;border-radius:7px;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit}
+.fb-p{background:#FF6600;color:#fff}.fb-p:hover{background:#e55a00}
+.fb-p.edit-mode{background:#0066CC}.fb-p.edit-mode:hover{background:#0055aa}
+.fb-s{background:var(--brd);color:var(--t2)}.fb-s:hover{background:#ccc}
+.hint{font-size:10px;color:var(--t3);text-align:center;margin-top:5px}
+.note{font-size:10px;color:var(--t2);margin-bottom:8px}
+
+/* MAP */
+.map-wrap{flex:1;position:relative}
+#map{width:100%;height:100%}
+.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 4px 16px rgba(0,0,0,.15)!important}
+.pop h3{font-size:13px;font-weight:700;margin-bottom:3px}
+.pop p{font-size:11px;color:#555;margin:2px 0}
+.pop .pop-b{font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:3px;color:#fff;display:inline-block;margin-bottom:5px}
+.toast{position:fixed;bottom:16px;right:16px;background:#00A651;color:#fff;padding:8px 16px;border-radius:8px;font-weight:600;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+[class^="mk-"]{background:none!important;border:none!important}
+@media(max-width:768px){.sb{width:100%;min-width:100%;height:40vh}#app{flex-direction:column}.map-wrap{height:60vh}}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="sb">
+  <div class="sb-head">
+    <div class="sb-title">🇫🇮 Finland Hypermarket Map</div>
+    <div class="sb-count" id="cnt">Loading...</div>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="search"><input id="q" placeholder="Search stores..." /></div>
+  <div class="list" id="list"></div>
+  <div class="add-panel">
+    <button class="add-btn" id="addBtn">+ Add Store or Brand</button>
+    <div class="form" id="form">
+      <div class="tabs">
+        <div class="tab on" data-t="s">Add Store</div>
+        <div class="tab" data-t="b">New Brand</div>
+      </div>
+      <div id="ts">
+        <div class="fg"><label class="fl">Brand</label><select class="fi" id="fBrand"></select></div>
+        <div class="fg"><label class="fl">Store Name</label><input class="fi" id="fName"></div>
+        <div class="fg"><label class="fl">Address</label><input class="fi" id="fAddr" placeholder="For geocoding"></div>
+        <div class="fg"><label class="fl">City</label><input class="fi" id="fCity"></div>
+        <div class="fg"><label class="fl">Comment (optional)</label><textarea class="fi" id="fNote" rows="2"></textarea></div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">Lat</label><input class="fi" id="fLat"></div>
+          <div class="fg"><label class="fl">Lng</label><input class="fi" id="fLng"></div>
+        </div>
+        <div class="fa"><button class="fb fb-p" id="geoBtn">📍 Geocode</button></div>
+        <div class="fa"><button class="fb fb-p" id="saveBtn">Save Store</button><button class="fb fb-s" id="cancelBtn">Cancel</button></div>
+        <div class="hint">💡 Click map or enter address + Geocode</div>
+      </div>
+      <div id="tb" style="display:none">
+        <p class="note">Create a new store chain that isn't on the map yet</p>
+        <div class="fg"><label class="fl">Brand Name</label><input class="fi" id="fBN"></div>
+        <div class="fg"><label class="fl">Marker Letter</label><input class="fi" id="fBL" maxlength="2" style="width:50px"></div>
+        <div class="fg"><label class="fl">Color</label><div class="colors" id="cpick"></div></div>
+        <div class="fa"><button class="fb fb-p" id="saveBrand">Create Brand</button><button class="fb fb-s" id="cancelBrand">Cancel</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="map-wrap">
+  <div id="map"></div>
+</div>
+<div class="toast" id="toast"></div>
+</div>
+<script>
+// ════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════
+const BRANDS={
+kcm:{name:'K‑Citymarket',color:'#FF6600',letter:'K'},
+hh:{name:'HalpaHalli',color:'#E31E24',letter:'H'},
+pr:{name:'Prisma',color:'#7B2D8E',letter:'P'},
+tk:{name:'Tokmanni',color:'#F39C12',letter:'T'},
+li:{name:'Lidl',color:'#0050AA',letter:'L'},
+};
+
+const STORES=[
+// K-CITYMARKET (84)
+{n:"K‑Citymarket Imatra",a:"Tietäjänkatu 2, 55120 Imatra",c:"Imatra",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Lappeenranta",a:"Toikansuontie 4, 53500 Lappeenranta",c:"Lappeenranta",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Seinäjoki Ideapark",a:"Suupohjantie 57, 60320 Seinäjoki",c:"Seinäjoki",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Seinäjoki Päivölä",a:"Väinämöinen 2, 60120 Seinäjoki",c:"Seinäjoki",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Mikkeli",a:"Graanintie 1, 50190 Mikkeli",c:"Mikkeli",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Savonlinna",a:"Tulliportinkatu 10, 57100 Savonlinna",c:"Savonlinna",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kajaani",a:"Kauppakatu 10, 87100 Kajaani",c:"Kajaani",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Forssa",a:"Kutomonkuja 1, 30100 Forssa",c:"Forssa",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Hämeenlinna Hämeensaari",a:"Hämeensaarentie 7, 13100 Hämeenlinna",c:"Hämeenlinna",h:"6.30–24",b:"kcm"},
+{n:"K‑Citymarket Hämeenlinna Tiiriö",a:"Katsastusmiehentie 6, 13130 Hämeenlinna",c:"Hämeenlinna",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Riihimäki",a:"Merkoksenkatu 5, 11710 Riihimäki",c:"Riihimäki",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Kokkola",a:"Heinolankaari 9, 67600 Kokkola",c:"Kokkola",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Jyväskylä Keljo",a:"Kylmälahdentie 6, 40500 Jyväskylä",c:"Jyväskylä",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Jyväskylä Seppälä",a:"Vasarakatu 29, 40320 Jyväskylä",c:"Jyväskylä",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Palokka",a:"Saarijärventie 50-52, 40270 Palokka",c:"Jyväskylä",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kotka",a:"Jumalniementie 8, 48600 Kotka",c:"Kotka",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kouvola",a:"Tervasharjunkatu 1, 45720 Kouvola",c:"Kouvola",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Rovaniemi",a:"Pulkamontie 1, 96900 Rovaniemi",c:"Rovaniemi",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Tornio",a:"Länsiranta 10, 95400 Tornio",c:"Tornio",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Pirkkala",a:"Palmrothintie 2, 33950 Pirkkala",c:"Pirkkala",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Sastamala",a:"Itsenäisyydentie 66, 38200 Sastamala",c:"Sastamala",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Lielahti",a:"Harjuntausta 7, 33400 Tampere",c:"Tampere",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Tampere Linnainmaa",a:"Mäentakusenkatu 1, 33580 Tampere",c:"Tampere",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Turtola",a:"Martinpojankatu 4, 33710 Tampere",c:"Tampere",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Vaasa Keskusta",a:"Hovioikeudenpuistikko 17, 65100 Vaasa",c:"Vaasa",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Vaasa Kivihaka",a:"Kokkokalliontie 2-6, 65300 Vaasa",c:"Vaasa",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Joensuu Centrum",a:"Kauppakatu 16, 80100 Joensuu",c:"Joensuu",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Joensuu Pilkko",a:"Linjatie 2, 80140 Joensuu",c:"Joensuu",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Oulu Kaakkuri",a:"Metsokankaantie 5, 90420 Oulu",c:"Oulu",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Oulu Raksila",a:"Tehtaankatu 5, 90130 Oulu",c:"Oulu",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Oulu Rusko",a:"Laakeritie 4, 90630 Oulu",c:"Oulu",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Raahe",a:"Ollinkalliontie 2, 92120 Raahe",c:"Raahe",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Iisalmi",a:"Eteläntie 4, 74130 Iisalmi",c:"Iisalmi",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Kuopio Kolmisoppi",a:"Kolmisopentie 1, 70780 Kuopio",c:"Kuopio",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kuopio Päiväranta",a:"Päivärannantie 18, 70420 Kuopio",c:"Kuopio",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Varkaus",a:"Relanderinkatu 30, 78200 Varkaus",c:"Varkaus",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Lahti Karisma",a:"Kauppiaankatu 2, 15160 Lahti",c:"Lahti",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Lahti Paavola",a:"Kauppakatu 16, 15140 Lahti",c:"Lahti",h:"6.30–23",b:"kcm"},
+{n:"K‑Citymarket Laune",a:"Ajokatu 53, 15500 Lahti",c:"Lahti",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Kankaanpää",a:"Keskuskatu 39, 38700 Kankaanpää",c:"Kankaanpää",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Mikkola",a:"Itäkeskuksenkaari 8, 28130 Pori",c:"Pori",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Puuvilla",a:"Siltapuistokatu 14, 28100 Pori",c:"Pori",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Rauma",a:"Karjalankatu 5, 26100 Rauma",c:"Rauma",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Iso Omena",a:"Piispansilta 11, 02230 Espoo",c:"Espoo",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Sello",a:"Leppävaarankatu 3, 02600 Espoo",c:"Espoo",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Helsinki Columbus",a:"Tyynylaavantie 5, 00980 Helsinki",c:"Helsinki",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Helsinki Easton",a:"Gotlanninkatu 13, 00930 Helsinki",c:"Helsinki",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Helsinki Malmi",a:"Malminkaari 19, 00700 Helsinki",c:"Helsinki",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Ruoholahti",a:"Itämerenkatu 21, 00180 Helsinki",c:"Helsinki",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Hyvinkää",a:"Hämeenkatu 9, 05800 Hyvinkää",c:"Hyvinkää",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Järvenpää",a:"Sushikuja 1, 04410 Järvenpää",c:"Järvenpää",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Kerava",a:"Nikonkatu 1, 04200 Kerava",c:"Kerava",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Lohja",a:"Ojamonharjuntie 61, 08200 Lohja",c:"Lohja",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Porvoo",a:"Runeberginkatu 33, 06100 Porvoo",c:"Porvoo",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Myyrmanni",a:"Iskoskuja 3, 01600 Vantaa",c:"Vantaa",h:"6–24",b:"kcm"},
+{n:"K‑Citymarket Vantaa Jumbo",a:"Vantaanportinkatu 3, 01510 Vantaa",c:"Vantaa",h:"6–24",b:"kcm"},
+{n:"K‑Citymarket Vantaa Kivistö",a:"Topaasikuja 8, 01700 Vantaa",c:"Vantaa",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Vantaa Koivukylä",a:"Ojalehdonkuja 1, 01400 Vantaa",c:"Vantaa",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Vantaa Tammisto",a:"Tammiston kauppatie 9, 01510 Vantaa",c:"Vantaa",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Ravattula",a:"Reivikatu 5-7, 20660 Littoinen",c:"Turku",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Loimaa",a:"Aleksis Kiven Katu 11, 32200 Loimaa",c:"Loimaa",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Salo",a:"Hämeentie 24-30, 24240 Salo",c:"Salo",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Kupittaa",a:"Uudenmaantie 17, 20700 Turku",c:"Turku",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Länsikeskus",a:"Markulantie 150, 20320 Turku",c:"Turku",h:"24h",b:"kcm"},
+{n:"K‑Citymarket Skanssi",a:"Itäkaari 20, 20730 Turku",c:"Turku",h:"7–23",b:"kcm"},
+{n:"K‑Citymarket Heinola",a:"Hevossaarentie 1, 18100 Heinola",c:"Heinola",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Jämsä",a:"Keskuskatu 23, 42100 Jämsä",c:"Jämsä",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kauhajoki",a:"Puistotie 70, 61800 Kauhajoki",c:"Kauhajoki",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Kemi",a:"Asemakatu 1, 94100 Kemi",c:"Kemi",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Keminmaa",a:"Jauholantie 1-3, 94450 Keminmaa",c:"Keminmaa",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Kirkkonummi",a:"Asemankulma 2, 02400 Kirkkonummi",c:"Kirkkonummi",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Klaukkala",a:"Viirintie 9, 01800 Klaukkala",c:"Klaukkala",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Kuusamo",a:"Luomantie 1-3, 93600 Kuusamo",c:"Kuusamo",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Lieksa",a:"Pielisentie 34, 81700 Lieksa",c:"Lieksa",h:"7–21",b:"kcm"},
+{n:"K‑Citymarket Mäntsälä",a:"Sälinkääntie 2, 04600 Mäntsälä",c:"Mäntsälä",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Nokia",a:"Nuijamiestentie 5, 37120 Nokia",c:"Nokia",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Pietarsaari",a:"Koulukatu 6, 68600 Pietarsaari",c:"Pietarsaari",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Valkeakoski",a:"Hakalantie 1, 37600 Valkeakoski",c:"Valkeakoski",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Vihti Nummela",a:"Tuusankaari 1, 03100 Nummela",c:"Nummela",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Ylivieska",a:"Savarinkatu 2, 84100 Ylivieska",c:"Ylivieska",h:"8–21",b:"kcm"},
+{n:"K‑Citymarket Ylöjärvi",a:"Elotie 1, 33470 Ylöjärvi",c:"Ylöjärvi",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Äänekoski",a:"Työskintie 3, 44100 Äänekoski",c:"Äänekoski",h:"7–22",b:"kcm"},
+{n:"K‑Citymarket Lempäälä Ideapark",a:"Ideaparkinkatu 4, 37570 Lempäälä",c:"Lempäälä",h:"8–22",b:"kcm"},
+{n:"K‑Citymarket Pieksämäki",a:"Keskuskatu 27, 76100 Pieksämäki",c:"Pieksämäki",h:"8–21",b:"kcm"},
+// HALPA-HALLI (35)
+{n:"HalpaHalli Alahärmä",a:"Härmäntie 2, 62300 Alahärmä",c:"Alahärmä",h:"",b:"hh"},
+{n:"HalpaHalli Alajärvi",a:"Kiventie 1, 62900 Alajärvi",c:"Alajärvi",h:"",b:"hh"},
+{n:"HalpaHalli Haapajärvi",a:"Kauppakatu 26, 85800 Haapajärvi",c:"Haapajärvi",h:"",b:"hh"},
+{n:"HalpaHalli Haapavesi",a:"Pulkkilantie 33, 86600 Haapavesi",c:"Haapavesi",h:"",b:"hh"},
+{n:"HalpaHalli Haukipudas",a:"Heitontie 2, 90830 Haukipudas",c:"Haukipudas",h:"",b:"hh"},
+{n:"HalpaHalli Iisalmi",a:"Kilpivirrantie 6, 74120 Iisalmi",c:"Iisalmi",h:"",b:"hh"},
+{n:"HalpaHalli Jalasjärvi",a:"Oikotie 2, 61600 Jalasjärvi",c:"Jalasjärvi",h:"",b:"hh"},
+{n:"HalpaHalli Kalajoki",a:"Kalajoentie 1, 85100 Kalajoki",c:"Kalajoki",h:"",b:"hh"},
+{n:"HalpaHalli Kankaanpää",a:"Asemakatu 3, 38700 Kankaanpää",c:"Kankaanpää",h:"",b:"hh"},
+{n:"HalpaHalli Kannus",a:"Siltakatu 11, 69100 Kannus",c:"Kannus",h:"",b:"hh"},
+{n:"HalpaHalli Kauhajoki",a:"Ostajantie 1, 61800 Kauhajoki",c:"Kauhajoki",h:"",b:"hh"},
+{n:"HalpaHalli Kauhava",a:"Kauppatie 69, 62200 Kauhava",c:"Kauhava",h:"",b:"hh"},
+{n:"HalpaHalli Kaustinen",a:"Pajalantie 4, 69600 Kaustinen",c:"Kaustinen",h:"",b:"hh"},
+{n:"HalpaHalli Kiiminki",a:"Isoahontie 1-3, 90900 Kiiminki",c:"Kiiminki",h:"",b:"hh"},
+{n:"HalpaHalli Kokkola",a:"Tehtaankatu 1, 67100 Kokkola",c:"Kokkola",h:"",b:"hh"},
+{n:"HalpaHalli Kurikka",a:"Keskuspuistikko 1-3, 61300 Kurikka",c:"Kurikka",h:"",b:"hh"},
+{n:"HalpaHalli Laihia",a:"Kauppatie 4, 66400 Laihia",c:"Laihia",h:"",b:"hh"},
+{n:"HalpaHalli Lapua",a:"Lassilantie 15, 62100 Lapua",c:"Lapua",h:"",b:"hh"},
+{n:"HalpaHalli Liminka",a:"Mutkalankaari 3, 91900 Liminka",c:"Liminka",h:"",b:"hh"},
+{n:"HalpaHalli Muhos",a:"Kirkkotie 2, 91500 Muhos",c:"Muhos",h:"",b:"hh"},
+{n:"HalpaHalli Muurame",a:"Setäläntie 3 B, 40950 Muurame",c:"Muurame",h:"",b:"hh"},
+{n:"HalpaHalli Nivala",a:"Toritie 20, 85500 Nivala",c:"Nivala",h:"",b:"hh"},
+{n:"HalpaHalli Närpiö",a:"Tegelbruksvägen 12, 64200 Närpiö",c:"Närpiö",h:"",b:"hh"},
+{n:"HalpaHalli Oulainen",a:"Keskuskatu 21, 86300 Oulainen",c:"Oulainen",h:"",b:"hh"},
+{n:"HalpaHalli Parkano",a:"Teollisuustie 2, 39700 Parkano",c:"Parkano",h:"",b:"hh"},
+{n:"HalpaHalli Pietarsaari",a:"Kanavapuistikko 19, 68600 Pietarsaari",c:"Pietarsaari",h:"",b:"hh"},
+{n:"HalpaHalli Pori",a:"Paanakedonkatu 22, 28100 Pori",c:"Pori",h:"",b:"hh"},
+{n:"HalpaHalli Pyhäjärvi",a:"Mustaparrantie 1, 86800 Pyhäjärvi",c:"Pyhäjärvi",h:"",b:"hh"},
+{n:"HalpaHalli Raahe",a:"Uimahallintie 9, 92100 Raahe",c:"Raahe",h:"",b:"hh"},
+{n:"HalpaHalli Saarijärvi",a:"Jyväskyläntie 33, 43100 Saarijärvi",c:"Saarijärvi",h:"",b:"hh"},
+{n:"HalpaHalli Seinäjoki",a:"Välskärinkatu 2, 60320 Seinäjoki",c:"Seinäjoki",h:"",b:"hh"},
+{n:"HalpaHalli Siilinjärvi",a:"Siilinkoskentie 1, 71800 Siilinjärvi",c:"Siilinjärvi",h:"",b:"hh"},
+{n:"HalpaHalli Vaasa",a:"Laturintie 6, 65100 Vaasa",c:"Vaasa",h:"",b:"hh"},
+{n:"HalpaHalli Ylivieska",a:"Rautatiekatu 11, 84100 Ylivieska",c:"Ylivieska",h:"",b:"hh"},
+{n:"HalpaHalli Äänekoski",a:"Kieppi 2, 44100 Äänekoski",c:"Äänekoski",h:"",b:"hh"},
+// PRISMA (key 35 stores - avoiding duplicate addresses with K-Citymarket)
+{n:"Prisma Forssa",a:"Tapulikuja 6, 30100 Forssa",c:"Forssa",h:"7–22",b:"pr"},
+{n:"Prisma Herttoniemi",a:"Linnanrakentajantie 2, 00880 Helsinki",c:"Helsinki",h:"6–00",b:"pr"},
+{n:"Prisma Hollola",a:"Kansankatu 8, 15870 Hollola",c:"Hollola",h:"7–23",b:"pr"},
+{n:"Prisma Hyvinkää",a:"Torikatu 9, 05800 Hyvinkää",c:"Hyvinkää",h:"6–00",b:"pr"},
+{n:"Prisma Hämeenkatu Tampere",a:"Hämeenkatu 21, 33200 Tampere",c:"Tampere",h:"6–00",b:"pr"},
+{n:"Prisma Hämeenlinna",a:"Wartiamäentie 2, 13130 Hämeenlinna",c:"Hämeenlinna",h:"7–23",b:"pr"},
+{n:"Prisma Iso Omena",a:"Piispansilta 9, 02230 Espoo",c:"Espoo",h:"6–00",b:"pr"},
+{n:"Prisma Itäkeskus",a:"Vanhanlinnantie 1, 00900 Helsinki",c:"Helsinki",h:"24h",b:"pr"},
+{n:"Prisma Joensuu",a:"Voimatie 2, 80100 Joensuu",c:"Joensuu",h:"8–22",b:"pr"},
+{n:"Prisma Jumbo",a:"Vantaanportinkatu 5, 01510 Vantaa",c:"Vantaa",h:"6–00",b:"pr"},
+{n:"Prisma Järvenpää",a:"Rantakatu 5, 04400 Järvenpää",c:"Järvenpää",h:"6–00",b:"pr"},
+{n:"Prisma Kaari Kannelmäki",a:"Kantelettarentie 3, 00420 Helsinki",c:"Helsinki",h:"24h",b:"pr"},
+{n:"Prisma Kaleva Tampere",a:"Sammonkatu 75, 33540 Tampere",c:"Tampere",h:"24h",b:"pr"},
+{n:"Prisma Keljo Jyväskylä",a:"Kylmälahdentie 8, 40500 Jyväskylä",c:"Jyväskylä",h:"7–23",b:"pr"},
+{n:"Prisma Kerava",a:"Kauppakaari 2, 04200 Kerava",c:"Kerava",h:"24h",b:"pr"},
+{n:"Prisma Kokkola",a:"Prismantie 1, 67700 Kokkola",c:"Kokkola",h:"7–23",b:"pr"},
+{n:"Prisma Kotka",a:"Hakamäentie 1, 48400 Kotka",c:"Kotka",h:"7–22",b:"pr"},
+{n:"Prisma Kouvola",a:"Tommolankatu 9, 45130 Kouvola",c:"Kouvola",h:"7–22",b:"pr"},
+{n:"Prisma Kuopio",a:"Savilahdentie 10, 70700 Kuopio",c:"Kuopio",h:"6–23",b:"pr"},
+{n:"Prisma Lielahti Tampere",a:"Turvesuonkatu 2, 33400 Tampere",c:"Tampere",h:"24h",b:"pr"},
+{n:"Prisma Limingantulli Oulu",a:"Nuottasaarentie 1, 90400 Oulu",c:"Oulu",h:"7–23",b:"pr"},
+{n:"Prisma Lippulaiva",a:"Espoonlahdenkatu 8, 02320 Espoo",c:"Espoo",h:"6–00",b:"pr"},
+{n:"Prisma Malmi",a:"Malmin Kauppatie 18, 00700 Helsinki",c:"Helsinki",h:"6–00",b:"pr"},
+{n:"Prisma Mikkeli",a:"Graanintie 3, 50190 Mikkeli",c:"Mikkeli",h:"7–22",b:"pr"},
+{n:"Prisma Myyrmanni",a:"Iskoskuja 5, 01600 Vantaa",c:"Vantaa",h:"6–00",b:"pr"},
+{n:"Prisma Pirkkala",a:"Kenkätie 4, 33950 Pirkkala",c:"Pirkkala",h:"6–00",b:"pr"},
+{n:"Prisma Raksila Oulu",a:"Tehtaankatu 3, 90130 Oulu",c:"Oulu",h:"7–23",b:"pr"},
+{n:"Prisma Rovaniemi",a:"Teollisuustie 2, 96320 Rovaniemi",c:"Rovaniemi",h:"8–23",b:"pr"},
+{n:"Prisma Seinäjoki",a:"Hyllykalliontie 2, 60510 Seinäjoki",c:"Seinäjoki",h:"7–23",b:"pr"},
+{n:"Prisma Sello",a:"Leppävaarankatu 5, 02600 Espoo",c:"Espoo",h:"6–00",b:"pr"},
+{n:"Prisma Seppälä Jyväskylä",a:"Ahjokatu 7, 40320 Jyväskylä",c:"Jyväskylä",h:"6–00",b:"pr"},
+{n:"Prisma Tikkurila",a:"Unikkotie 13, 01300 Vantaa",c:"Vantaa",h:"6–00",b:"pr"},
+{n:"Prisma Tripla",a:"Firdonkatu 2, 00520 Helsinki",c:"Helsinki",h:"24h",b:"pr"},
+{n:"Prisma Viikki",a:"Viikintori 3, 00790 Helsinki",c:"Helsinki",h:"6–00",b:"pr"},
+{n:"Prisma Valkeakoski",a:"Valtakatu 11, 37600 Valkeakoski",c:"Valkeakoski",h:"7–22",b:"pr"},
+// TOKMANNI (key 40)
+{n:"Tokmanni Espoo Sello",a:"Leppävaarankatu 9, 02600 Espoo",c:"Espoo",h:"9–21",b:"tk"},
+{n:"Tokmanni Forssa",a:"Miemolantie 2, 30300 Forssa",c:"Forssa",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Citycenter",a:"Kaivokatu 8, 00100 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Herttoniemi",a:"Insinöörinkatu 2, 00880 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Itis",a:"Turunlinnantie 4, 00930 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Kaari",a:"Kantelettarentie 5, 00420 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Kontula",a:"Sirrikuja 1, 00940 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki Malmi",a:"Ala-Malmintori 5, 00700 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Helsinki REDI",a:"Hermannin rantatie 5, 00580 Helsinki",c:"Helsinki",h:"9–21",b:"tk"},
+{n:"Tokmanni Helsinki Ruoholahti",a:"Itämerenkatu 19, 00180 Helsinki",c:"Helsinki",h:"8–21",b:"tk"},
+{n:"Tokmanni Hyvinkää",a:"Kauppatori 1, 05800 Hyvinkää",c:"Hyvinkää",h:"8–21",b:"tk"},
+{n:"Tokmanni Hämeenlinna",a:"Hämeensaarentie 5, 13100 Hämeenlinna",c:"Hämeenlinna",h:"8–21",b:"tk"},
+{n:"Tokmanni Iisalmi",a:"Meijerikatu 3, 74120 Iisalmi",c:"Iisalmi",h:"7–21",b:"tk"},
+{n:"Tokmanni Joensuu",a:"Raatekankaantie 4, 80100 Joensuu",c:"Joensuu",h:"7–21",b:"tk"},
+{n:"Tokmanni Jyväskylä",a:"Sorastajantie 1, 40320 Jyväskylä",c:"Jyväskylä",h:"8–20",b:"tk"},
+{n:"Tokmanni Kajaani",a:"Kasarminkatu 18, 87100 Kajaani",c:"Kajaani",h:"7–21",b:"tk"},
+{n:"Tokmanni Kuopio",a:"Kolmisopentie 3, 70780 Kuopio",c:"Kuopio",h:"8–20",b:"tk"},
+{n:"Tokmanni Lahti Laune",a:"Alhonkatu 3, 15610 Lahti",c:"Lahti",h:"8–20",b:"tk"},
+{n:"Tokmanni Lappeenranta",a:"Hiessillankatu 5, 53550 Lappeenranta",c:"Lappeenranta",h:"8–20",b:"tk"},
+{n:"Tokmanni Oulu Jukola",a:"Jukolankuja 1, 90410 Oulu",c:"Oulu",h:"8–21",b:"tk"},
+{n:"Tokmanni Pori",a:"Itäkeskuksenkaari 10, 28130 Pori",c:"Pori",h:"8–21",b:"tk"},
+{n:"Tokmanni Rovaniemi",a:"Teollisuustie 13, 96320 Rovaniemi",c:"Rovaniemi",h:"8–20",b:"tk"},
+{n:"Tokmanni Seinäjoki",a:"Pohjan akka 5, 60120 Seinäjoki",c:"Seinäjoki",h:"8–21",b:"tk"},
+{n:"Tokmanni Tampere Hervanta",a:"Pietilänkatu 2, 33720 Tampere",c:"Tampere",h:"8–21",b:"tk"},
+{n:"Tokmanni Tampere Lielahti",a:"Harjuntausta 14, 33400 Tampere",c:"Tampere",h:"8–21",b:"tk"},
+{n:"Tokmanni Turku Länsikeskus",a:"Viilarinkatu 8, 20320 Turku",c:"Turku",h:"8–21",b:"tk"},
+{n:"Tokmanni Vaasa",a:"Kokkokalliontie 8, 65300 Vaasa",c:"Vaasa",h:"8–21",b:"tk"},
+{n:"Tokmanni Vantaa Myyrmanni",a:"Iskoskuja 1, 01600 Vantaa",c:"Vantaa",h:"8–21",b:"tk"},
+{n:"Tokmanni Vantaa Tammisto",a:"Nilsaksentie 4, 01510 Vantaa",c:"Vantaa",h:"8–21",b:"tk"},
+{n:"Tokmanni Vantaa Tikkurila",a:"Tikkuraitti 11, 01300 Vantaa",c:"Vantaa",h:"8–21",b:"tk"},
+{n:"Tokmanni Varkaus",a:"Käsityökatu 22, 78200 Varkaus",c:"Varkaus",h:"7–21",b:"tk"},
+{n:"Tokmanni Savonlinna",a:"Kartanonväylä 3, 57210 Savonlinna",c:"Savonlinna",h:"8–20",b:"tk"},
+{n:"Tokmanni Tornio",a:"Teollisuuskatu 14, 95420 Tornio",c:"Tornio",h:"8–21",b:"tk"},
+{n:"Tokmanni Riihimäki",a:"Merkoksenkatu 5 B, 11710 Riihimäki",c:"Riihimäki",h:"8–21",b:"tk"},
+{n:"Tokmanni Mikkeli",a:"Setrikatu 1, 50100 Mikkeli",c:"Mikkeli",h:"8–20",b:"tk"},
+{n:"Tokmanni Kotka",a:"Jumalniementie 7, 48600 Kotka",c:"Kotka",h:"8–20",b:"tk"},
+{n:"Tokmanni Kouvola",a:"Palokankaantie 4, 45200 Kouvola",c:"Kouvola",h:"8–20",b:"tk"},
+{n:"Tokmanni Kerava",a:"Peltomäenkatu 2, 04250 Kerava",c:"Kerava",h:"8–21",b:"tk"},
+{n:"Tokmanni Nokia",a:"Nuijamiestentie 9, 37120 Nokia",c:"Nokia",h:"8–21",b:"tk"},
+{n:"Tokmanni Porvoo",a:"Asentajantie 5, 06150 Porvoo",c:"Porvoo",h:"8–21",b:"tk"},
+{n:"Tokmanni Rauma",a:"Kairakatu 2, 26100 Rauma",c:"Rauma",h:"8–20",b:"tk"},
+// LIDL (key 50 - one per city to keep map clean, largest cities get multiple)
+{n:"Lidl Helsinki Sörnäinen",a:"Hämeentie 33, 00500 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Kamppi",a:"Kampinkuja 2, 00100 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Kallio",a:"Neljäs linja 3, 00530 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki REDI",a:"Hermannin rantatie 7, 00580 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Itäkeskus",a:"Itäkatu 7, 00930 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Kontula",a:"Ostostie 4, 00940 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Malmi",a:"Malmin Kauppatie 20, 00700 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Töölö",a:"Töölöntullinkatu 8, 00250 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Espoo Leppävaara",a:"Ratsukatu 3, 02600 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Espoonlahti",a:"Ulappakatu 2, 02320 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Niittykumpu",a:"Niittymaantie 2, 02200 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Vantaa Tammisto",a:"Säätökuja 2, 01520 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Myyrmäki",a:"Liesitori 1, 01600 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Kivistö",a:"Vantaankoskentie 69, 01700 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Tampere Ratina",a:"Vuolteenkatu 1, 33100 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Lielahti",a:"Harjuntausta 11, 33400 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Hervanta",a:"Insinöörinkatu 23, 33720 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Turku Keskusta",a:"Eerikinkatu 4, 20100 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Turku Länsikeskus",a:"Viilarinkatu 10, 20320 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Turku Skanssi",a:"Mustionkatu 31, 20520 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Oulu Keskusta",a:"Isokatu 51, 90100 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Limingantulli",a:"Paljekuja 12, 90150 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Haukipudas",a:"Revontie 38, 90830 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Jyväskylä Keskusta",a:"Vapaudenkatu 49, 40100 Jyväskylä",c:"Jyväskylä",h:"",b:"li"},
+{n:"Lidl Jyväskylä Seppälä",a:"Vasarakatu 4, 40320 Jyväskylä",c:"Jyväskylä",h:"",b:"li"},
+{n:"Lidl Kuopio Haapaniemi",a:"Tehdaskatu 12, 70620 Kuopio",c:"Kuopio",h:"",b:"li"},
+{n:"Lidl Lahti Keskusta",a:"Vapaudenkatu 23, 15140 Lahti",c:"Lahti",h:"",b:"li"},
+{n:"Lidl Lahti Laune",a:"Launeenkatu 86, 15610 Lahti",c:"Lahti",h:"",b:"li"},
+{n:"Lidl Lappeenranta",a:"Myllymäenkatu 36, 53550 Lappeenranta",c:"Lappeenranta",h:"",b:"li"},
+{n:"Lidl Joensuu",a:"Kuurnankatu 3, 80100 Joensuu",c:"Joensuu",h:"",b:"li"},
+{n:"Lidl Kouvola",a:"Laturinkatu 1, 45130 Kouvola",c:"Kouvola",h:"",b:"li"},
+{n:"Lidl Kotka",a:"Sutelantie 151, 48400 Kotka",c:"Kotka",h:"",b:"li"},
+{n:"Lidl Vaasa",a:"Sairaskodinkatu 1, 65100 Vaasa",c:"Vaasa",h:"",b:"li"},
+{n:"Lidl Seinäjoki",a:"Verkatehtaankatu 12, 60100 Seinäjoki",c:"Seinäjoki",h:"",b:"li"},
+{n:"Lidl Rovaniemi",a:"Oijustie 2, 96320 Rovaniemi",c:"Rovaniemi",h:"",b:"li"},
+{n:"Lidl Hämeenlinna",a:"Eteläkatu 14, 13100 Hämeenlinna",c:"Hämeenlinna",h:"",b:"li"},
+{n:"Lidl Pori",a:"Paanakedonkatu 10, 28100 Pori",c:"Pori",h:"",b:"li"},
+{n:"Lidl Rauma",a:"Papinhaankatu 7, 26100 Rauma",c:"Rauma",h:"",b:"li"},
+{n:"Lidl Kokkola",a:"Tervahovintie 4, 67100 Kokkola",c:"Kokkola",h:"",b:"li"},
+{n:"Lidl Mikkeli",a:"Setrikatu 3, 50100 Mikkeli",c:"Mikkeli",h:"",b:"li"},
+{n:"Lidl Savonlinna",a:"Ilokallionkatu 4, 57200 Savonlinna",c:"Savonlinna",h:"",b:"li"},
+{n:"Lidl Hyvinkää",a:"Kauppalankatu 20, 05800 Hyvinkää",c:"Hyvinkää",h:"",b:"li"},
+{n:"Lidl Porvoo",a:"Maistraatinkatu 2, 06100 Porvoo",c:"Porvoo",h:"",b:"li"},
+{n:"Lidl Riihimäki",a:"Etelän Viertotie 8, 11100 Riihimäki",c:"Riihimäki",h:"",b:"li"},
+{n:"Lidl Lohja",a:"Reunakatu 1, 08200 Lohja",c:"Lohja",h:"",b:"li"},
+{n:"Lidl Kirkkonummi",a:"Munkinmäentie 8, 02400 Kirkkonummi",c:"Kirkkonummi",h:"",b:"li"},
+{n:"Lidl Kerava",a:"Santaniitynkatu 7, 04250 Kerava",c:"Kerava",h:"",b:"li"},
+{n:"Lidl Järvenpää",a:"Kinnarinkatu 6, 04430 Järvenpää",c:"Järvenpää",h:"",b:"li"},
+{n:"Lidl Pirkkala",a:"Kaartotie 1, 33950 Pirkkala",c:"Pirkkala",h:"",b:"li"},
+{n:"Lidl Tornio",a:"Teollisuuskatu 12, 95420 Tornio",c:"Tornio",h:"",b:"li"},
+{n:"Lidl Kajaani",a:"Sotkamontie 7, 87100 Kajaani",c:"Kajaani",h:"",b:"li"},
+,
+{n:"Prisma Halikko",a:"Prismantie 2, 24800 Halikko",c:"Halikko",h:"24h",b:"pr"},
+{n:"Prisma Holma Lahti",a:"Johanneksenkatu 4, 15240 Lahti",c:"Lahti",h:"7–23",b:"pr"},
+{n:"Prisma Ideapark Lempäälä",a:"Ideaparkinkatu 2, 37570 Lempäälä",c:"Lempäälä",h:"8–21",b:"pr"},
+{n:"Prisma Iisalmi",a:"Parkatintie 2, 74120 Iisalmi",c:"Iisalmi",h:"7–22",b:"pr"},
+{n:"Prisma Imatra",a:"Karhumäenkatu 1, 55120 Imatra",c:"Imatra",h:"7–22",b:"pr"},
+{n:"Prisma Itäharju",a:"Kalevantie 41, 20520 Turku",c:"Turku",h:"7–23",b:"pr"},
+{n:"Prisma Kajaani",a:"Veturitie 1, 87100 Kajaani",c:"Kajaani",h:"7–21",b:"pr"},
+{n:"Prisma Kangasala",a:"Mäkirinteentie 10, 36220 Kangasala",c:"Kangasala",h:"7–22",b:"pr"},
+{n:"Prisma Kemi",a:"Karjalahdenkatu 7, 94600 Kemi",c:"Kemi",h:"8–21",b:"pr"},
+{n:"Prisma Kirkkonummi",a:"Munkinmäentie 29, 02400 Kirkkonummi",c:"Kirkkonummi",h:"6–00",b:"pr"},
+{n:"Prisma Koivistonkylä Tampere",a:"Lempääläntie 21, 33820 Tampere",c:"Tampere",h:"7–22",b:"pr"},
+{n:"Prisma Kotiranta Vaasa",a:"Jukolantie 1, 65300 Vaasa",c:"Vaasa",h:"7–23",b:"pr"},
+{n:"Prisma Kuusamo",a:"Huoparintie 1, 93600 Kuusamo",c:"Kuusamo",h:"8–21",b:"pr"},
+{n:"Prisma Lappee",a:"Kaakkoiskaari 22, 53500 Lappeenranta",c:"Lappeenranta",h:"7–23",b:"pr"},
+{n:"Prisma Lappeenranta",a:"Puhakankatu 9-11, 53600 Lappeenranta",c:"Lappeenranta",h:"7–23",b:"pr"},
+{n:"Prisma Laune",a:"Ajokatu 83, 15610 Lahti",c:"Lahti",h:"7–23",b:"pr"},
+{n:"Prisma Liisanlehto Vaasa",a:"Elementtitehtaantie 1, 65380 Vaasa",c:"Vaasa",h:"7–23",b:"pr"},
+{n:"Prisma Linnainmaa Tampere",a:"Liikekatu 3, 33580 Tampere",c:"Tampere",h:"24h",b:"pr"},
+{n:"Prisma Linnanmaa Oulu",a:"Kauppalinnankuja 1, 90570 Oulu",c:"Oulu",h:"7–23",b:"pr"},
+{n:"Prisma Lohja",a:"Laurinkatu 37-41, 08100 Lohja",c:"Lohja",h:"24h",b:"pr"},
+{n:"Prisma Loimaa",a:"Aleksis Kiven katu 7, 32200 Loimaa",c:"Loimaa",h:"7–22",b:"pr"},
+{n:"Prisma Länsikeskus",a:"Viilarinkatu 3, 20320 Turku",c:"Turku",h:"7–23",b:"pr"},
+{n:"Prisma Mill",a:"Myllynkatu 1, 21280 Raisio",c:"Raisio",h:"7–23",b:"pr"},
+{n:"Prisma Nokia",a:"Yrittäjäkatu 10, 37100 Nokia",c:"Nokia",h:"7–22",b:"pr"},
+{n:"Prisma Nummela",a:"Naaranpajuntie 3, 03100 Nummela",c:"Nummela",h:"24h",b:"pr"},
+{n:"Prisma Olari",a:"Komeetankatu 2, 02210 Espoo",c:"Espoo",h:"24h",b:"pr"},
+{n:"Prisma Orimattila",a:"Erkontie 16, 16300 Orimattila",c:"Orimattila",h:"6.30–22",b:"pr"},
+{n:"Prisma Palokka",a:"Palokanorsi 3, 40270 Palokka",c:"Jyväskylä",h:"7–23",b:"pr"},
+{n:"Prisma Pieksämäki",a:"Kangaskatu 6, 76100 Pieksämäki",c:"Pieksämäki",h:"7–21",b:"pr"},
+{n:"Prisma Jakobstad",a:"Koulukatu 4, 68600 Pietarsaari",c:"Pietarsaari",h:"7–22",b:"pr"},
+{n:"Prisma Piispanristi",a:"Kairiskulmantie 3, 20760 Kaarina",c:"Turku",h:"24h",b:"pr"},
+{n:"Prisma Pori Länsi-Pori",a:"Eteläväylä 2, 28610 Pori",c:"Pori",h:"7–22",b:"pr"},
+{n:"Prisma Pori Mikkola",a:"Itäkeskuksenkaari 6, 28130 Pori",c:"Pori",h:"7–22",b:"pr"},
+{n:"Prisma Raahe",a:"Mettalanväylä 1, 92150 Raahe",c:"Raahe",h:"7–22",b:"pr"},
+{n:"Prisma Rauma",a:"Porintie 4, 26100 Rauma",c:"Rauma",h:"7–22",b:"pr"},
+{n:"Prisma Riihimäki",a:"Voimalankatu 2, 11100 Riihimäki",c:"Riihimäki",h:"7–23",b:"pr"},
+{n:"Prisma Sastamala",a:"Vammalantie 7, 38200 Sastamala",c:"Sastamala",h:"7–22",b:"pr"},
+{n:"Prisma Savonlinna",a:"Nojanmaantie 15, 57210 Savonlinna",c:"Savonlinna",h:"7–22",b:"pr"},
+{n:"Prisma Syke",a:"Kauppakatu 18, 15140 Lahti",c:"Lahti",h:"7–23",b:"pr"},
+{n:"Prisma Tampereentie",a:"Vanha Tampereentie 108, 20300 Turku",c:"Turku",h:"24h",b:"pr"},
+{n:"Prisma Tornio",a:"Oikokatu 1, 95420 Tornio",c:"Tornio",h:"8–21",b:"pr"},
+{n:"Prisma Varkaus",a:"Sorvikatu 3, 78200 Varkaus",c:"Varkaus",h:"7–22",b:"pr"},
+{n:"Prisma Ylivieska",a:"Savarinkatu 9, 84100 Ylivieska",c:"Ylivieska",h:"7–21",b:"pr"},
+{n:"Prisma Ylöjärvi",a:"Lähdevainiontie 1, 33480 Ylöjärvi",c:"Ylöjärvi",h:"7–22",b:"pr"},
+{n:"Prisma Zeppelin",a:"Zeppeliinintie 1, 90450 Kempele",c:"Kempele",h:"7–22",b:"pr"},
+{n:"Tokmanni Pirkkala",a:"Palmrothintie 1, 33950 Pirkkala",c:"Pirkkala",h:"8–21",b:"tk"},
+{n:"Tokmanni Raahe",a:"Rakentajankatu 6, 92130 Raahe",c:"Raahe",h:"8–21",b:"tk"},
+{n:"Tokmanni Äänekoski",a:"Äänekoskentie 50, 44100 Äänekoski",c:"Äänekoski",h:"8–21",b:"tk"},
+{n:"Lidl Akaa",a:"Vuoritie 2, 37800 Akaa",c:"Akaa",h:"",b:"li"},
+{n:"Lidl Alajärvi",a:"Yrittäjäntie 1, 62900 Alajärvi",c:"Alajärvi",h:"",b:"li"},
+{n:"Lidl Espoo Mankkaa",a:"Mankkaantie 2-4, 02180 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Laajalahti",a:"Sinimäentie 16, 02180 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Iso Omena",a:"Piispansilta 13, 02230 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Suomenoja",a:"Martinsillantie 10, 02270 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Hannus",a:"Kurjenkellontie 1, 02270 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Nöykkiönlaakso",a:"Sillankorva 3, 02300 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Karakallio",a:"Rastaspuistontie 1, 02620 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Muurala",a:"Kukkaromäki 2, 02770 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Suvela",a:"Siltakatu 13, 02770 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Kauklahti",a:"Räävelintie 2, 02780 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Espoo Bemböle",a:"Turuntie 207, 02740 Espoo",c:"Espoo",h:"",b:"li"},
+{n:"Lidl Forssa",a:"Pihlajakatu 2, 30420 Forssa",c:"Forssa",h:"",b:"li"},
+{n:"Lidl Hamina",a:"Maariankatu 20, 49400 Hamina",c:"Hamina",h:"",b:"li"},
+{n:"Lidl Hanko",a:"Esplanaadi 134, 10960 Hanko",c:"Hanko",h:"",b:"li"},
+{n:"Lidl Harjavalta",a:"Teollisuuskatu 4a, 29200 Harjavalta",c:"Harjavalta",h:"",b:"li"},
+{n:"Lidl Heinola",a:"Siltakatu 21, 18100 Heinola",c:"Heinola",h:"",b:"li"},
+{n:"Lidl Helsinki Kluuvi",a:"Kaivokatu 10, 00100 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Kamppi 2",a:"Jaakonkatu 3, 00100 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Jätkäsaari",a:"Länsisatamankatu 35, 00180 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Lauttasaari",a:"Heikkiläntie 4, 00210 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Pitäjänmäki",a:"Höyläämötie 1, 00380 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Konala",a:"Ristipellontie 9, 00390 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Vallila",a:"Bruno Granholmin kuja 2, 00510 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Tripla",a:"Firdonkatu 2 B, 00520 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Itä-Pasila",a:"Ratapihantie 3, 00520 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Arabianranta",a:"Hämeentie 109, 00550 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Hermanni",a:"Vanha Talvitie 12, 00580 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Pakila",a:"Pakilantie 46, 00660 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Pihlajamäki",a:"Meripihkatie 1, 00710 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Ala-Tikkurila",a:"Aamuruskontie 1, 00750 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Tattarisuo",a:"Suurmetsäntie 6, 00770 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Herttoniemenranta",a:"Linnanrakentajantie 4, 00810 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Roihupelto",a:"Tulppatie 2, 00880 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Helsinki Vuosaari",a:"Rastilantie 1, 00980 Helsinki",c:"Helsinki",h:"",b:"li"},
+{n:"Lidl Hollola",a:"Terveystie 49, 15860 Hollola",c:"Hollola",h:"",b:"li"},
+{n:"Lidl Huittinen",a:"Risto Rytin katu 12, 32700 Huittinen",c:"Huittinen",h:"",b:"li"},
+{n:"Lidl Hyvinkää 2",a:"Mäkikuumolantie 3, 05800 Hyvinkää",c:"Hyvinkää",h:"",b:"li"},
+{n:"Lidl Hämeenlinna Tiiriö",a:"Pitkätanhuankatu 4, 13130 Hämeenlinna",c:"Hämeenlinna",h:"",b:"li"},
+{n:"Lidl Hämeenlinna Hätilä",a:"Liikekatu 1, 13210 Hämeenlinna",c:"Hämeenlinna",h:"",b:"li"},
+{n:"Lidl Iisalmi",a:"Kivikoulunkuja 1, 74120 Iisalmi",c:"Iisalmi",h:"",b:"li"},
+{n:"Lidl Ikaalinen",a:"Pirkantie 2, 39500 Ikaalinen",c:"Ikaalinen",h:"",b:"li"},
+{n:"Lidl Imatra Mansikkala",a:"Tietäjänkatu 1, 55120 Imatra",c:"Imatra",h:"",b:"li"},
+{n:"Lidl Imatra Vuoksenniska",a:"Valvatinkatu 8, 55800 Imatra",c:"Imatra",h:"",b:"li"},
+{n:"Lidl Turenki",a:"Harvialantie 11, 14200 Turenki",c:"Turenki",h:"",b:"li"},
+{n:"Lidl Joensuu Pilkko",a:"Linjatie 1, 80140 Joensuu",c:"Joensuu",h:"",b:"li"},
+{n:"Lidl Joensuu Repokallio",a:"Repokalliontie 1, 80230 Joensuu",c:"Joensuu",h:"",b:"li"},
+{n:"Lidl Jyväskylä Palokka",a:"Saarijärventie 63, 40270 Jyväskylä",c:"Jyväskylä",h:"",b:"li"},
+{n:"Lidl Jyväskylä Jyskä",a:"Akkalankuja 2, 40420 Jyväskylä",c:"Jyväskylä",h:"",b:"li"},
+{n:"Lidl Jyväskylä Keljo",a:"Kylmälahdentie 13, 40500 Jyväskylä",c:"Jyväskylä",h:"",b:"li"},
+{n:"Lidl Jämsä",a:"Esankatu 4, 42100 Jämsä",c:"Jämsä",h:"",b:"li"},
+{n:"Lidl Kaarina Keskusta",a:"Lautakunnankatu 7, 20780 Kaarina",c:"Kaarina",h:"",b:"li"},
+{n:"Lidl Kaarina Krossi",a:"Laasmäenkatu 6, 20780 Kaarina",c:"Kaarina",h:"",b:"li"},
+{n:"Lidl Kangasala",a:"Lentolankuja 8, 36220 Kangasala",c:"Kangasala",h:"",b:"li"},
+{n:"Lidl Kankaanpää",a:"Asemakatu 2, 38700 Kankaanpää",c:"Kankaanpää",h:"",b:"li"},
+{n:"Lidl Karkkila",a:"Yrittäjäntie 4, 03600 Karkkila",c:"Karkkila",h:"",b:"li"},
+{n:"Lidl Kauhajoki",a:"Puistotie 60, 61800 Kauhajoki",c:"Kauhajoki",h:"",b:"li"},
+{n:"Lidl Kauhava",a:"Heimolankuja 2, 62200 Kauhava",c:"Kauhava",h:"",b:"li"},
+{n:"Lidl Kemi",a:"Täikönkatu 4, 94100 Kemi",c:"Kemi",h:"",b:"li"},
+{n:"Lidl Kemijärvi",a:"Kirkkokatu 2-4, 98100 Kemijärvi",c:"Kemijärvi",h:"",b:"li"},
+{n:"Lidl Kempele",a:"Myllytie 3, 90450 Kempele",c:"Kempele",h:"",b:"li"},
+{n:"Lidl Keuruu",a:"Tehtaantie 6, 42700 Keuruu",c:"Keuruu",h:"",b:"li"},
+{n:"Lidl Kokemäki",a:"Pyhänkorvantie 2, 32800 Kokemäki",c:"Kokemäki",h:"",b:"li"},
+{n:"Lidl Kokkola 2",a:"Strangintie 1, 67400 Kokkola",c:"Kokkola",h:"",b:"li"},
+{n:"Lidl Kotka Karhula",a:"Karhukuja 4, 48600 Kotka",c:"Kotka",h:"",b:"li"},
+{n:"Lidl Kouvola Tornionmäki",a:"Lehtomäenkatu 1, 45200 Kouvola",c:"Kouvola",h:"",b:"li"},
+{n:"Lidl Kouvola Voikkaa",a:"Sepäntie 2, 45700 Kouvola",c:"Kouvola",h:"",b:"li"},
+{n:"Lidl Kouvola Kuusankoski",a:"Laaksotie 4, 46900 Kouvola",c:"Kouvola",h:"",b:"li"},
+{n:"Lidl Kuopio Inkilänmäki",a:"Sisustajantie 8, 70340 Kuopio",c:"Kuopio",h:"",b:"li"},
+{n:"Lidl Kuopio Petonen",a:"Petosentie 4, 70820 Kuopio",c:"Kuopio",h:"",b:"li"},
+{n:"Lidl Kuusamo",a:"Airotie 13, 93600 Kuusamo",c:"Kuusamo",h:"",b:"li"},
+{n:"Lidl Lahti Kivistö",a:"Kivistönkatu 1, 15210 Lahti",c:"Lahti",h:"",b:"li"},
+{n:"Lidl Lahti Nastola",a:"Kauppakaari 1, 15560 Lahti",c:"Lahti",h:"",b:"li"},
+{n:"Lidl Lappeenranta Mustola",a:"Pelkolankatu 3, 53420 Lappeenranta",c:"Lappeenranta",h:"",b:"li"},
+{n:"Lidl Lappeenranta Leiri",a:"Puhakankatu 1, 53600 Lappeenranta",c:"Lappeenranta",h:"",b:"li"},
+{n:"Lidl Lapua",a:"Rakentajantie 4, 62100 Lapua",c:"Lapua",h:"",b:"li"},
+{n:"Lidl Laukaa",a:"Vuojärventie 1, 41340 Laukaa",c:"Laukaa",h:"",b:"li"},
+{n:"Lidl Lempäälä Keskusta",a:"Liikekatu 3, 37500 Lempäälä",c:"Lempäälä",h:"",b:"li"},
+{n:"Lidl Lempäälä Marjamäki",a:"Realparkinkatu 1, 37570 Lempäälä",c:"Lempäälä",h:"",b:"li"},
+{n:"Lidl Leppävirta",a:"Tarhurintie 3, 79100 Leppävirta",c:"Leppävirta",h:"",b:"li"},
+{n:"Lidl Lieksa",a:"Mönninkatu 2, 81700 Lieksa",c:"Lieksa",h:"",b:"li"},
+{n:"Lidl Lieto",a:"Simpukkatie 4, 21420 Lieto",c:"Lieto",h:"",b:"li"},
+{n:"Lidl Loimaa",a:"Kartanomäenkatu 4, 32200 Loimaa",c:"Loimaa",h:"",b:"li"},
+{n:"Lidl Loviisa",a:"Porvoonkatu 7, 07900 Loviisa",c:"Loviisa",h:"",b:"li"},
+{n:"Lidl Mikkeli Urpola",a:"Työkeskuksenkatu 4, 50170 Mikkeli",c:"Mikkeli",h:"",b:"li"},
+{n:"Lidl Muurame",a:"Setäläntie 3b, 40950 Muurame",c:"Muurame",h:"",b:"li"},
+{n:"Lidl Mäntsälä",a:"Töyrynummentie 2, 04600 Mäntsälä",c:"Mäntsälä",h:"",b:"li"},
+{n:"Lidl Naantali",a:"Rautakatu 1, 21100 Naantali",c:"Naantali",h:"",b:"li"},
+{n:"Lidl Nivala",a:"Toritie 18, 85500 Nivala",c:"Nivala",h:"",b:"li"},
+{n:"Lidl Nokia",a:"Nuijamiestentie 2, 37120 Nokia",c:"Nokia",h:"",b:"li"},
+{n:"Lidl Nurmijärvi",a:"Lahnuksentie 2, 01800 Nurmijärvi",c:"Nurmijärvi",h:"",b:"li"},
+{n:"Lidl Närpiö",a:"Tegelbruksvägen 2, 64230 Närpiö",c:"Närpiö",h:"",b:"li"},
+{n:"Lidl Orimattila",a:"Niementie 1, 16300 Orimattila",c:"Orimattila",h:"",b:"li"},
+{n:"Lidl Orivesi",a:"Kääjäntie 5, 35300 Orivesi",c:"Orivesi",h:"",b:"li"},
+{n:"Lidl Oulu Ruukki",a:"Ruukinkuja 1, 90250 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Metsokangas",a:"Metsokankaantie 1, 90420 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Tuira",a:"Tuirantie 14, 90500 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Kaijonharju",a:"Karttatie 2, 90650 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Oulu Haapalehto",a:"Väliahontie 49, 90800 Oulu",c:"Oulu",h:"",b:"li"},
+{n:"Lidl Paimio",a:"Kauppatie 2, 21530 Paimio",c:"Paimio",h:"",b:"li"},
+{n:"Lidl Parainen",a:"Vapparintie 1-3, 21600 Parainen",c:"Parainen",h:"",b:"li"},
+{n:"Lidl Parkano",a:"Humalankatu 2, 39700 Parkano",c:"Parkano",h:"",b:"li"},
+{n:"Lidl Pieksämäki",a:"Keskuskatu 3, 76100 Pieksämäki",c:"Pieksämäki",h:"",b:"li"},
+{n:"Lidl Pietarsaari",a:"Itäinen Rengastie 31, 68600 Pietarsaari",c:"Pietarsaari",h:"",b:"li"},
+{n:"Lidl Pori Musa",a:"Eteläväylä 9, 28610 Pori",c:"Pori",h:"",b:"li"},
+{n:"Lidl Porvoo 2",a:"Asentajantie 7, 06150 Porvoo",c:"Porvoo",h:"",b:"li"},
+{n:"Lidl Raahe",a:"Fellmanin puistokatu 15, 92100 Raahe",c:"Raahe",h:"",b:"li"},
+{n:"Lidl Karjaa",a:"Ratakatu 50, 10300 Karjaa",c:"Karjaa",h:"",b:"li"},
+{n:"Lidl Tammisaari",a:"Oikotie 2, 10600 Tammisaari",c:"Tammisaari",h:"",b:"li"},
+{n:"Lidl Raisio",a:"Kyläpajankatu 2, 21200 Raisio",c:"Raisio",h:"",b:"li"},
+{n:"Lidl Riihimäki 2",a:"Karankatu 15, 11120 Riihimäki",c:"Riihimäki",h:"",b:"li"},
+{n:"Lidl Rovaniemi 2",a:"Pulkamontie 2, 96900 Rovaniemi",c:"Rovaniemi",h:"",b:"li"},
+{n:"Lidl Saarijärvi",a:"Jyväskyläntie 31a, 43100 Saarijärvi",c:"Saarijärvi",h:"",b:"li"},
+{n:"Lidl Salo Keskusta",a:"Savipajankatu 3, 24240 Salo",c:"Salo",h:"",b:"li"},
+{n:"Lidl Salo Halikko",a:"Halikontie 1, 24800 Salo",c:"Salo",h:"",b:"li"},
+{n:"Lidl Sastamala",a:"Nuutilankatu 1, 38200 Sastamala",c:"Sastamala",h:"",b:"li"},
+{n:"Lidl Savonlinna",a:"Ilokallionkatu 4, 57200 Savonlinna",c:"Savonlinna",h:"",b:"li"},
+{n:"Lidl Seinäjoki 2",a:"Tehtaantie 4 B, 60100 Seinäjoki",c:"Seinäjoki",h:"",b:"li"},
+{n:"Lidl Siilinjärvi",a:"Kuiluntie 6, 71800 Siilinjärvi",c:"Siilinjärvi",h:"",b:"li"},
+{n:"Lidl Sipoo Söderkulla",a:"Uusi Porvoontie 1143, 01150 Sipoo",c:"Sipoo",h:"",b:"li"},
+{n:"Lidl Sodankylä",a:"Lapintie 1, 99600 Sodankylä",c:"Sodankylä",h:"",b:"li"},
+{n:"Lidl Somero",a:"Hämeentie 6, 31400 Somero",c:"Somero",h:"",b:"li"},
+{n:"Lidl Sotkamo",a:"Ratatie 17, 88600 Sotkamo",c:"Sotkamo",h:"",b:"li"},
+{n:"Lidl Tampere Keskusta",a:"Hallituskatu 14-16, 33200 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Finlayson",a:"Finlaysoninkatu 7, 33210 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Tesoma",a:"Tesoman Valtatie 30, 33300 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Janka",a:"Sammon Valtatie 16, 33560 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Linnainmaa",a:"Heikkilänkatu 14, 33560 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Tampere Lakalaiva",a:"Autovarikonkatu 13, 33840 Tampere",c:"Tampere",h:"",b:"li"},
+{n:"Lidl Turku Pitkämäki",a:"Kollikatu 1, 20250 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Turku Kärsämäki",a:"Kärsämäentie 2, 20300 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Turku Itäharju",a:"Kalevantie 19, 20520 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Turku Vähäheikkilä",a:"Vähäheikkiläntie 58, 20810 Turku",c:"Turku",h:"",b:"li"},
+{n:"Lidl Tuusula",a:"Majavantie 1, 04320 Tuusula",c:"Tuusula",h:"",b:"li"},
+{n:"Lidl Ulvila",a:"Vanha Helsingintie 4, 28400 Ulvila",c:"Ulvila",h:"",b:"li"},
+{n:"Lidl Uusikaupunki",a:"Levysepänkatu 2, 23500 Uusikaupunki",c:"Uusikaupunki",h:"",b:"li"},
+{n:"Lidl Vaasa Kivihaka",a:"Gneissikuja 1, 65300 Vaasa",c:"Vaasa",h:"",b:"li"},
+{n:"Lidl Vaasa Melaniemi",a:"Kaarnatie 1, 65320 Vaasa",c:"Vaasa",h:"",b:"li"},
+{n:"Lidl Valkeakoski",a:"Asemantie 1, 37630 Valkeakoski",c:"Valkeakoski",h:"",b:"li"},
+{n:"Lidl Vantaa Havukoski",a:"Viitakuja 1, 01360 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Jokiniemi",a:"Lauri Korpisen katu 9, 01370 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Hiekkaharju",a:"Elmontie 1, 01400 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Metsola",a:"Murmelikuja 11, 01480 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Pakkala",a:"Antaksentie 4, 01510 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Kaivoksela",a:"Vanha Kaarelantie 33 B, 01610 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Martinlaakso",a:"Kivivuorentie 4, 01620 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Vantaa Vantaanlaakso",a:"Vantaanlaaksontie 34, 01670 Vantaa",c:"Vantaa",h:"",b:"li"},
+{n:"Lidl Varkaus",a:"Kauppakatu 74, 78200 Varkaus",c:"Varkaus",h:"",b:"li"},
+{n:"Lidl Nummela",a:"Asemantie 4, 03100 Nummela",c:"Nummela",h:"",b:"li"},
+{n:"Lidl Viitasaari",a:"Haapaniementie 2, 44500 Viitasaari",c:"Viitasaari",h:"",b:"li"},
+{n:"Lidl Ylivieska",a:"Hakatie 6, 84100 Ylivieska",c:"Ylivieska",h:"",b:"li"},
+{n:"Lidl Ylöjärvi",a:"Mastontie 8, 33470 Ylöjärvi",c:"Ylöjärvi",h:"",b:"li"},
+{n:"Lidl Äänekoski",a:"Kuhnamontie 5a, 44100 Äänekoski",c:"Äänekoski",h:"",b:"li"},
+{n:"Lidl Tampere Rautatienkatu",a:"Rautatienkatu 21, 33100 Tampere",c:"Tampere",h:"",b:"li"},
+];
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let brands = JSON.parse(JSON.stringify(BRANDS));
+let stores = STORES.map(s=>({...s}));
+let activeFilters = new Set(Object.keys(brands));
+let markers = {};
+let formOpen = false;
+let editIdx = null;
+let selColor = '#0066CC';
+const PALETTE = ['#0066CC','#1ABC9C','#E91E63','#00BCD4','#8BC34A','#FF5722','#607D8B','#795548'];
+const GC_KEY = 'fi_hypermap_geo_v4';
+const CUSTOM_KEY = 'fi_hypermap_custom_v1';
+
+// ════════════════════════════════════════════
+// PERSISTENCE via window.storage
+// ════════════════════════════════════════════
+function saveCustom() {
+  const cStores = stores.filter(s => s.custom);
+  const cBrands = {};
+  for (const [k, b] of Object.entries(brands)) {
+    if (!BRANDS[k]) cBrands[k] = b;
+  }
+  const data = JSON.stringify({ stores: cStores, brands: cBrands });
+  if (window.storage) {
+    window.storage.set(CUSTOM_KEY, data, true).then(() => {
+      showToast('✓ Saved ' + cStores.length + ' custom store' + (cStores.length !== 1 ? 's' : ''));
+    }).catch(e => {
+      // Fallback to localStorage
+      try { localStorage.setItem(CUSTOM_KEY, data); } catch(e2) {}
+      showToast('✓ Saved locally');
+    });
+  } else {
+    try { localStorage.setItem(CUSTOM_KEY, data); } catch(e) {}
+    showToast('✓ Saved locally');
+  }
+}
+
+async function loadCustom() {
+  let data = null;
+  // Try window.storage first
+  if (window.storage) {
+    try {
+      const r = await window.storage.get(CUSTOM_KEY, true);
+      if (r && r.value) data = r.value;
+    } catch(e) {}
+  }
+  // Fallback to localStorage
+  if (!data) {
+    try { data = localStorage.getItem(CUSTOM_KEY); } catch(e) {}
+  }
+  if (data) {
+    try {
+      const d = JSON.parse(data);
+      if (d.brands) {
+        for (const [k, b] of Object.entries(d.brands)) {
+          brands[k] = b;
+          activeFilters.add(k);
+        }
+      }
+      if (d.stores) {
+        d.stores.forEach(s => { s.custom = true; stores.push(s); });
+      }
+    } catch(e) {}
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ════════════════════════════════════════════
+// GEOCODING
+// ════════════════════════════════════════════
+function gcLoad() { try { return JSON.parse(localStorage.getItem(GC_KEY) || '{}'); } catch { return {}; } }
+function gcSave(c) { try { localStorage.setItem(GC_KEY, JSON.stringify(c)); } catch {} }
+
+async function geocode1(addr) {
+  // Try geocode.maps.co first (works from GitHub Pages)
+  try {
+    const r = await fetch('https://geocode.maps.co/search?' + new URLSearchParams({
+      q: addr + ', Finland', format: 'json', limit: '1'
+    }));
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.length) return { lat: +d[0].lat, lng: +d[0].lon };
+    }
+  } catch(e) {}
+  // Fallback to Nominatim
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
+      q: addr + ', Finland', format: 'json', limit: '1', countrycodes: 'fi'
+    }), { headers: { 'User-Agent': 'FinlandStoreMap/1.0' } });
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.length) return { lat: +d[0].lat, lng: +d[0].lon };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ════════════════════════════════════════════
+// MAP
+// ════════════════════════════════════════════
+const map = L.map('map', { zoomControl: false }).setView([63.5, 25.5], 6);
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  attribution: '© Google Maps', maxZoom: 20
+}).addTo(map);
+
+function mkIcon(color, letter) {
+  return L.divIcon({
+    className: 'mk-' + letter + color.replace('#', ''),
+    html: '<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z" fill="' + color + '" stroke="rgba(0,0,0,.4)" stroke-width="1.5"/><circle cx="14" cy="13" r="6" fill="white" opacity=".95"/><text x="14" y="16.5" text-anchor="middle" font-size="10" font-weight="700" font-family="sans-serif" fill="' + color + '">' + letter + '</text></svg>',
+    iconSize: [28, 36], iconAnchor: [14, 36], popupAnchor: [0, -36]
+  });
+}
+
+function addMarker(s, i) {
+  if (!s.lat || !s.lng) return;
+  const b = brands[s.b];
+  if (!b) return;
+  if (markers[i]) map.removeLayer(markers[i]);
+  const m = L.marker([s.lat, s.lng], { icon: mkIcon(b.color, b.letter) }).addTo(map);
+  m.bindPopup('<div class="pop"><span class="pop-b" style="background:' + b.color + '">' + b.name + '</span><h3>' + s.n + '</h3><p>📍 ' + s.a + '</p>' + (s.h ? '<p>🕐 ' + s.h + '</p>' : '') + '</div>');
+  markers[i] = m;
+  if (!activeFilters.has(s.b)) map.removeLayer(m);
+}
+
+function addAllMarkers() {
+  markers = {};
+  stores.forEach((s, i) => addMarker(s, i));
+}
+
+// ════════════════════════════════════════════
+// UI
+// ════════════════════════════════════════════
+function renderFilters() {
+  const el = document.getElementById('filters');
+  el.innerHTML = '';
+  for (const [k, b] of Object.entries(brands)) {
+    const n = stores.filter(s => s.b === k).length;
+    const on = activeFilters.has(k);
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (on ? ' on' : '');
+    if (on) chip.style.background = b.color;
+    chip.style.setProperty('--cc', b.color);
+    chip.innerHTML = '<span class="chip-dot" style="background:' + (on ? '#fff' : b.color) + '"></span>' + b.name + '<span class="chip-n">' + n + '</span>';
+    chip.onclick = () => {
+      if (activeFilters.has(k)) activeFilters.delete(k); else activeFilters.add(k);
+      renderFilters();
+      stores.forEach((s, i) => {
+        if (!markers[i]) return;
+        if (activeFilters.has(s.b)) { if (!map.hasLayer(markers[i])) map.addLayer(markers[i]); }
+        else { if (map.hasLayer(markers[i])) map.removeLayer(markers[i]); }
+      });
+      renderList();
+    };
+    el.appendChild(chip);
+  }
+}
+
+function renderList() {
+  const el = document.getElementById('list');
+  const q = document.getElementById('q').value.toLowerCase();
+  let html = '', shown = 0;
+  stores.forEach((s, i) => {
+    if (!activeFilters.has(s.b)) return;
+    const b = brands[s.b];
+    if (!b) return;
+    if (q && !s.n.toLowerCase().includes(q) && !s.c.toLowerCase().includes(q) && !b.name.toLowerCase().includes(q)) return;
+    shown++;
+    const dim = s.lat ? '' : 'opacity:.4;';
+    html += '<div class="row" data-i="' + i + '" style="--rc:' + b.color + ';' + dim + '">' +
+      '<span class="row-dot" style="background:' + b.color + '"></span>' +
+      '<div class="row-info"><div class="row-name">' + s.n + '</div>' +
+      '<div class="row-meta"><span class="row-tag" style="background:' + b.color + '">' + b.name + '</span>' +
+      '<span>' + s.c + '</span>' +
+      (s.h ? '<span class="row-hrs">' + s.h + '</span>' : '') +
+      '</div></div>' +
+      (s.custom ? '<button class="row-btn" data-edit="' + i + '" title="Edit">✎</button><button class="row-btn del" data-del="' + i + '" title="Delete">✕</button>' : '') +
+      '</div>';
+  });
+  el.innerHTML = html;
+  document.getElementById('cnt').textContent = stores.length + ' stores · ' + Object.keys(brands).length + ' brands · ' + shown + ' shown';
+
+  // Click handlers
+  el.querySelectorAll('.row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.row-btn')) return;
+      const i = +row.dataset.i;
+      el.querySelectorAll('.row').forEach(r => r.classList.remove('act'));
+      row.classList.add('act');
+      if (markers[i]) {
+        map.setView(markers[i].getLatLng(), 14, { animate: true });
+        markers[i].openPopup();
+      }
+    });
+  });
+
+  el.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = +btn.dataset.edit;
+      const s = stores[i];
+      openForm();
+      showTab('s');
+      document.getElementById('fBrand').value = s.b;
+      document.getElementById('fName').value = s.n;
+      document.getElementById('fAddr').value = s.a || '';
+      document.getElementById('fCity').value = s.c;
+      document.getElementById('fNote').value = s.h || '';
+      document.getElementById('fLat').value = s.lat || '';
+      document.getElementById('fLng').value = s.lng || '';
+      editIdx = i;
+      const btn2 = document.getElementById('saveBtn');
+      btn2.textContent = 'Update Store';
+      btn2.classList.add('edit-mode');
+    });
+  });
+
+  el.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = +btn.dataset.del;
+      if (!confirm('Delete "' + stores[i].n + '"?')) return;
+      if (markers[i]) map.removeLayer(markers[i]);
+      stores.splice(i, 1);
+      addAllMarkers();
+      renderFilters();
+      renderList();
+      saveCustom();
+    });
+  });
+}
+
+function refreshBrandSelect() {
+  const sel = document.getElementById('fBrand');
+  sel.innerHTML = '';
+  for (const [k, b] of Object.entries(brands)) {
+    sel.innerHTML += '<option value="' + k + '">' + b.name + '</option>';
+  }
+}
+
+function openForm() {
+  formOpen = true;
+  document.getElementById('form').classList.add('open');
+  document.getElementById('addBtn').textContent = '✕ Close';
+}
+
+function closeForm() {
+  formOpen = false;
+  document.getElementById('form').classList.remove('open');
+  document.getElementById('addBtn').textContent = '+ Add Store or Brand';
+  editIdx = null;
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Save Store';
+  btn.classList.remove('edit-mode');
+  ['fName', 'fAddr', 'fCity', 'fNote', 'fLat', 'fLng'].forEach(id => document.getElementById(id).value = '');
+}
+
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  document.querySelector('[data-t="' + t + '"]').classList.add('on');
+  document.getElementById('ts').style.display = t === 's' ? 'block' : 'none';
+  document.getElementById('tb').style.display = t === 'b' ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════════
+// EVENT HANDLERS
+// ════════════════════════════════════════════
+document.getElementById('q').addEventListener('input', () => renderList());
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  if (formOpen) { closeForm(); return; }
+  openForm();
+  showTab('s');
+});
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => showTab(t.dataset.t));
+});
+
+// Color picker
+const cpick = document.getElementById('cpick');
+PALETTE.forEach((c, i) => {
+  const el = document.createElement('div');
+  el.className = 'csw' + (i === 0 ? ' on' : '');
+  el.style.background = c;
+  el.onclick = () => {
+    cpick.querySelectorAll('.csw').forEach(x => x.classList.remove('on'));
+    el.classList.add('on');
+    selColor = c;
+  };
+  cpick.appendChild(el);
+});
+
+// Geocode button
+document.getElementById('geoBtn').addEventListener('click', async () => {
+  const addr = document.getElementById('fAddr').value.trim();
+  if (!addr) return alert('Enter an address first');
+  const btn = document.getElementById('geoBtn');
+  btn.textContent = '⏳ Geocoding...';
+  btn.disabled = true;
+  try {
+    const r = await geocode1(addr);
+    if (r) {
+      document.getElementById('fLat').value = r.lat.toFixed(5);
+      document.getElementById('fLng').value = r.lng.toFixed(5);
+      btn.textContent = '✅ Found!';
+    } else {
+      btn.textContent = '❌ Not found - try clicking the map';
+    }
+  } catch (e) {
+    btn.textContent = '❌ Error - try clicking the map';
+  }
+  btn.disabled = false;
+  setTimeout(() => { btn.textContent = '📍 Geocode'; }, 2500);
+});
+
+// Save store
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const bk = document.getElementById('fBrand').value;
+  const nm = document.getElementById('fName').value.trim();
+  const ad = document.getElementById('fAddr').value.trim();
+  const ci = document.getElementById('fCity').value.trim();
+  const nt = document.getElementById('fNote').value.trim();
+  const la = parseFloat(document.getElementById('fLat').value);
+  const ln = parseFloat(document.getElementById('fLng').value);
+
+  if (!nm || !ci) return alert('Please fill in Store Name and City.');
+  if (isNaN(la) || isNaN(ln)) return alert('Please set coordinates by clicking the map or using the Geocode button.');
+
+  if (editIdx !== null) {
+    // Update
+    const s = stores[editIdx];
+    s.n = nm; s.a = ad; s.c = ci; s.h = nt; s.lat = la; s.lng = ln; s.b = bk;
+    if (markers[editIdx]) map.removeLayer(markers[editIdx]);
+    addMarker(s, editIdx);
+  } else {
+    // Create
+    const s = { n: nm, a: ad, c: ci, h: nt, lat: la, lng: ln, b: bk, custom: true };
+    stores.push(s);
+    addMarker(s, stores.length - 1);
+  }
+
+  renderFilters();
+  renderList();
+  closeForm();
+  saveCustom();
+
+  const idx = editIdx !== null ? editIdx : stores.length - 1;
+  if (markers[idx]) {
+    map.setView(markers[idx].getLatLng(), 14, { animate: true });
+    markers[idx].openPopup();
+  }
+});
+
+document.getElementById('cancelBtn').addEventListener('click', closeForm);
+document.getElementById('cancelBrand').addEventListener('click', closeForm);
+
+// Save brand
+document.getElementById('saveBrand').addEventListener('click', () => {
+  const name = document.getElementById('fBN').value.trim();
+  const letter = document.getElementById('fBL').value.trim().toUpperCase() || (name ? name[0].toUpperCase() : '');
+
+  if (!name) return alert('Please enter a brand name.');
+
+  const key = name.toLowerCase().replace(/[^a-zäöå0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  if (brands[key]) {
+    return alert('A brand called "' + brands[key].name + '" already exists.\n\nTo add a store under that brand, switch to the "Add Store" tab and select it from the Brand dropdown.');
+  }
+
+  brands[key] = { name: name, color: selColor, letter: letter };
+  activeFilters.add(key);
+  saveCustom();
+  renderFilters();
+  refreshBrandSelect();
+
+  document.getElementById('fBN').value = '';
+  document.getElementById('fBL').value = '';
+
+  showToast('✓ Created brand "' + name + '"');
+  showTab('s');
+  document.getElementById('fBrand').value = key;
+});
+
+// Map click for coordinates
+map.on('click', e => {
+  if (formOpen) {
+    document.getElementById('fLat').value = e.latlng.lat.toFixed(5);
+    document.getElementById('fLng').value = e.latlng.lng.toFixed(5);
+  }
+});
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+async function init() {
+  await loadCustom();
+
+  // Load geocache
+  const cache = gcLoad();
+  let needGeo = 0;
+  stores.forEach(s => {
+    const key = s.n + '|' + s.a;
+    if (cache[key]) {
+      s.lat = cache[key].lat;
+      s.lng = cache[key].lng;
+    } else if (!s.lat) {
+      needGeo++;
+    }
+  });
+
+  renderFilters();
+  renderList();
+  refreshBrandSelect();
+  addAllMarkers();
+
+  // Background geocoding
+  if (needGeo > 0) {
+    showToast('⏳ Geocoding ' + needGeo + ' stores...');
+    const toGeo = [];
+    stores.forEach((s, i) => { if (!s.lat) toGeo.push(i); });
+
+    for (let j = 0; j < toGeo.length; j++) {
+      const s = stores[toGeo[j]];
+      try {
+        const r = await geocode1(s.a);
+        if (r) {
+          s.lat = r.lat;
+          s.lng = r.lng;
+          cache[s.n + '|' + s.a] = r;
+          addMarker(s, toGeo[j]);
+        }
+      } catch (e) {}
+      if (j % 10 === 0) { gcSave(cache); renderList(); }
+      await new Promise(r => setTimeout(r, 1100));
+    }
+    gcSave(cache);
+    renderList();
+    showToast('✅ All stores geocoded!');
+  }
+}
+
+init();
+
+// Poll for changes from other users every 15 seconds
+setInterval(async () => {
+  if (window.storage) {
+    try {
+      const r = await window.storage.get(CUSTOM_KEY, true);
+      if (r && r.value) {
+        const d = JSON.parse(r.value);
+        const currentCustom = stores.filter(s => s.custom);
+        const newCount = (d.stores || []).length;
+        // Only refresh if the data has changed
+        if (newCount !== currentCustom.length || JSON.stringify(d.stores) !== JSON.stringify(currentCustom)) {
+          // Remove old custom stores
+          stores = stores.filter(s => !s.custom);
+          // Remove old custom brands
+          for (const k of Object.keys(brands)) {
+            if (!BRANDS[k]) delete brands[k];
+          }
+          // Load new data
+          if (d.brands) {
+            for (const [k, b] of Object.entries(d.brands)) {
+              brands[k] = b;
+              activeFilters.add(k);
+            }
+          }
+          if (d.stores) {
+            d.stores.forEach(s => { s.custom = true; stores.push(s); });
+          }
+          // Re-render everything
+          addAllMarkers();
+          renderFilters();
+          renderList();
+          refreshBrandSelect();
+          showToast('🔄 Updated from team');
+        }
+      }
+    } catch(e) {}
+  }
+}, 15000);
+</script>
+</body>
+</html>
